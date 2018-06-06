@@ -10,15 +10,7 @@ import static org.everit.json.schema.loader.SpecificationVersion.DRAFT_7;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 import org.everit.json.schema.ArraySchema;
 import org.everit.json.schema.BooleanSchema;
@@ -41,6 +33,7 @@ import org.everit.json.schema.loader.internal.DefaultSchemaClient;
 import org.everit.json.schema.loader.internal.WrappingFormatValidator;
 import org.everit.json.schema.regexp.JavaUtilRegexpFactory;
 import org.everit.json.schema.regexp.RegexpFactory;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONPointer;
 
@@ -191,7 +184,56 @@ public class SchemaLoader {
         }
 
         public SchemaLoaderBuilder schemaJson(JSONObject schemaJson) {
-            return schemaJson(schemaJson.toMap());
+            //return schemaJson(schemaJson.toMap());
+
+            return schemaJson(toMap(schemaJson));
+        }
+
+        public Map<String, Object> toMap(JSONObject obj) {
+            Map<String, Object> results = new HashMap();
+
+            String key;
+            Object transformedValue;
+            for (Iterator keys = obj.keys(); keys.hasNext(); results.put(key, transformedValue)) {
+                key = (String) keys.next();
+                Object value = obj.get(key);
+                if(value != null && !JSONObject.NULL.equals(value)) {
+                    if(value instanceof JSONObject) {
+                        transformedValue = toMap((JSONObject) value);
+                    } else if(value instanceof JSONArray) {
+                        transformedValue = toList((JSONArray) value);
+                    } else {
+                        transformedValue = value;
+                    }
+                } else {
+                    transformedValue = null;
+                }
+            }
+            return results;
+        }
+
+        public List<Object> toList(JSONArray array) {
+            List<Object> results = new ArrayList(array.length());
+            Iterator var2 = array.iterator();
+
+            while(true) {
+                while(var2.hasNext()) {
+                    Object element = var2.next();
+                    if(element != null && !JSONObject.NULL.equals(element)) {
+                        if(element instanceof JSONArray) {
+                            results.add((toList((JSONArray)element)));
+                        } else if(element instanceof JSONObject) {
+                            results.add(toMap((JSONObject)element));
+                        } else {
+                            results.add(element);
+                        }
+                    } else {
+                        results.add((Object)null);
+                    }
+                }
+
+                return results;
+            }
         }
 
         public SchemaLoaderBuilder schemaJson(Object schema) {
