@@ -4,6 +4,7 @@ import static java.lang.String.format;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
+import static org.everit.json.schema.loader.JsonConverter.toMap;
 import static org.everit.json.schema.loader.SpecificationVersion.DRAFT_4;
 import static org.everit.json.schema.loader.SpecificationVersion.DRAFT_6;
 import static org.everit.json.schema.loader.SpecificationVersion.DRAFT_7;
@@ -89,17 +90,15 @@ public class SchemaLoader {
         }
 
         /**
-         * @param formatName
-         *         the name which will be used in the schema JSON files to refer to this {@code formatValidator}
-         * @param formatValidator
-         *         the object performing the validation for schemas which use the {@code formatName} format
+         * @param formatName      the name which will be used in the schema JSON files to refer to this {@code formatValidator}
+         * @param formatValidator the object performing the validation for schemas which use the {@code formatName} format
          * @return {@code this}
          * @deprecated instead it is better to override {@link FormatValidator#formatName()}
          * and use {@link #addFormatValidator(FormatValidator)}
          */
         @Deprecated
         public SchemaLoaderBuilder addFormatValidator(String formatName,
-                final FormatValidator formatValidator) {
+                                                      final FormatValidator formatValidator) {
             if (!Objects.equals(formatName, formatValidator.formatName())) {
                 formatValidators.put(formatName, new WrappingFormatValidator(formatName, formatValidator));
             } else {
@@ -156,8 +155,7 @@ public class SchemaLoader {
          * Sets the initial resolution scope of the schema. {@code id} and {@code $ref} attributes
          * accuring in the schema will be resolved against this value.
          *
-         * @param id
-         *         the initial (absolute) URI, used as the resolution scope.
+         * @param id the initial (absolute) URI, used as the resolution scope.
          * @return {@code this}
          */
         public SchemaLoaderBuilder resolutionScope(String id) {
@@ -184,56 +182,7 @@ public class SchemaLoader {
         }
 
         public SchemaLoaderBuilder schemaJson(JSONObject schemaJson) {
-            //return schemaJson(schemaJson.toMap());
-
             return schemaJson(toMap(schemaJson));
-        }
-
-        public Map<String, Object> toMap(JSONObject obj) {
-            Map<String, Object> results = new HashMap();
-
-            String key;
-            Object transformedValue;
-            for (Iterator keys = obj.keys(); keys.hasNext(); results.put(key, transformedValue)) {
-                key = (String) keys.next();
-                Object value = obj.get(key);
-                if(value != null && !JSONObject.NULL.equals(value)) {
-                    if(value instanceof JSONObject) {
-                        transformedValue = toMap((JSONObject) value);
-                    } else if(value instanceof JSONArray) {
-                        transformedValue = toList((JSONArray) value);
-                    } else {
-                        transformedValue = value;
-                    }
-                } else {
-                    transformedValue = null;
-                }
-            }
-            return results;
-        }
-
-        public List<Object> toList(JSONArray array) {
-            List<Object> results = new ArrayList(array.length());
-            Iterator var2 = array.iterator();
-
-            while(true) {
-                while(var2.hasNext()) {
-                    Object element = var2.next();
-                    if(element != null && !JSONObject.NULL.equals(element)) {
-                        if(element instanceof JSONArray) {
-                            results.add((toList((JSONArray)element)));
-                        } else if(element instanceof JSONObject) {
-                            results.add(toMap((JSONObject)element));
-                        } else {
-                            results.add(element);
-                        }
-                    } else {
-                        results.add((Object)null);
-                    }
-                }
-
-                return results;
-            }
         }
 
         public SchemaLoaderBuilder schemaJson(Object schema) {
@@ -258,8 +207,7 @@ public class SchemaLoader {
          * With this flag set to false, the validator ignores the default keyword inside the json schema.
          * If is true, validator applies default values when it's needed
          *
-         * @param useDefaults
-         *         if true, validator doesn't ignore default values
+         * @param useDefaults if true, validator doesn't ignore default values
          * @return {@code this}
          */
         public SchemaLoaderBuilder useDefaults(boolean useDefaults) {
@@ -294,8 +242,7 @@ public class SchemaLoader {
      * Loads a JSON schema to a schema validator using a {@link DefaultSchemaClient default HTTP
      * client}.
      *
-     * @param schemaJson
-     *         the JSON representation of the schema.
+     * @param schemaJson the JSON representation of the schema.
      * @return the schema validator object
      */
     public static Schema load(final JSONObject schemaJson) {
@@ -305,10 +252,8 @@ public class SchemaLoader {
     /**
      * Creates Schema instance from its JSON representation.
      *
-     * @param schemaJson
-     *         the JSON representation of the schema.
-     * @param httpClient
-     *         the HTTP client to be used for resolving remote JSON references.
+     * @param schemaJson the JSON representation of the schema.
+     * @param httpClient the HTTP client to be used for resolving remote JSON references.
      * @return the created schema
      */
     public static Schema load(final JSONObject schemaJson, final SchemaClient httpClient) {
@@ -328,12 +273,10 @@ public class SchemaLoader {
     /**
      * Constructor.
      *
-     * @param builder
-     *         the builder containing the properties. Only {@link SchemaLoaderBuilder#id} is
-     *         nullable.
-     * @throws NullPointerException
-     *         if any of the builder properties except {@link SchemaLoaderBuilder#id id} is
-     *         {@code null}.
+     * @param builder the builder containing the properties. Only {@link SchemaLoaderBuilder#id} is
+     *                nullable.
+     * @throws NullPointerException if any of the builder properties except {@link SchemaLoaderBuilder#id id} is
+     *                              {@code null}.
      */
     public SchemaLoader(SchemaLoaderBuilder builder) {
         Object effectiveRootSchemaJson = builder.rootSchemaJson == null
@@ -507,22 +450,22 @@ public class SchemaLoader {
 
     private Schema.Builder<?> loadForExplicitType(final String typeString) {
         switch (typeString) {
-        case "string":
-            return new StringSchemaLoader(ls, config.formatValidators).load();
-        case "integer":
-            return buildNumberSchema().requiresInteger(true);
-        case "number":
-            return buildNumberSchema();
-        case "boolean":
-            return BooleanSchema.builder();
-        case "null":
-            return NullSchema.builder();
-        case "array":
-            return buildArraySchema();
-        case "object":
-            return buildObjectSchema();
-        default:
-            throw new SchemaException(ls.locationOfCurrentObj(), format("unknown type: [%s]", typeString));
+            case "string":
+                return new StringSchemaLoader(ls, config.formatValidators).load();
+            case "integer":
+                return buildNumberSchema().requiresInteger(true);
+            case "number":
+                return buildNumberSchema();
+            case "boolean":
+                return BooleanSchema.builder();
+            case "null":
+                return NullSchema.builder();
+            case "array":
+                return buildArraySchema();
+            case "object":
+                return buildObjectSchema();
+            default:
+                throw new SchemaException(ls.locationOfCurrentObj(), format("unknown type: [%s]", typeString));
         }
     }
 
